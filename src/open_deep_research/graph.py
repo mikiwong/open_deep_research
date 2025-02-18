@@ -13,10 +13,11 @@ from langgraph.types import interrupt, Command
 from src.open_deep_research.state import ReportStateInput, ReportStateOutput, Sections, ReportState, SectionState, SectionOutputState, Queries, Feedback
 from src.open_deep_research.prompts import report_planner_query_writer_instructions, report_planner_instructions, query_writer_instructions, section_writer_instructions, final_section_writer_instructions, section_grader_instructions
 from src.open_deep_research.configuration import Configuration
-from src.open_deep_research.utils import tavily_search_async, deduplicate_and_format_sources, format_sections, perplexity_search
+from src.open_deep_research.utils import tavily_search_async, deduplicate_and_format_sources, format_sections, perplexity_search, parse_llm_response, langfuse_handler
 
 # Set writer model
-writer_model = ChatAnthropic(model=Configuration.writer_model, temperature=0) 
+# writer_model = ChatAnthropic(model=Configuration.writer_model, temperature=0) 
+writer_model = ChatOpenAI(model=Configuration.writer_model, temperature=0)
 
 # Nodes
 async def generate_report_plan(state: ReportState, config: RunnableConfig):
@@ -42,7 +43,9 @@ async def generate_report_plan(state: ReportState, config: RunnableConfig):
     system_instructions_query = report_planner_query_writer_instructions.format(topic=topic, report_organization=report_structure, number_of_queries=number_of_queries)
 
     # Generate queries  
-    results = structured_llm.invoke([SystemMessage(content=system_instructions_query)]+[HumanMessage(content="Generate search queries that will help with planning the sections of the report.")])
+    results = structured_llm.invoke([SystemMessage(content=system_instructions_query)]+[HumanMessage(content="Generate search queries that will help with planning the sections of the report.")],config={"callbacks": [langfuse_handler]})
+
+    print(results)
 
     # Web search
     query_list = [query.search_query for query in results.queries]
@@ -65,6 +68,8 @@ async def generate_report_plan(state: ReportState, config: RunnableConfig):
     else:
         raise ValueError(f"Unsupported search API: {configurable.search_api}")
 
+    print(search_results)
+    print(source_str)
     # Format system instructions
     system_instructions_sections = report_planner_instructions.format(topic=topic, report_organization=report_structure, context=source_str, feedback=feedback)
 
@@ -84,10 +89,12 @@ async def generate_report_plan(state: ReportState, config: RunnableConfig):
 
     # Generate sections 
     structured_llm = planner_llm.with_structured_output(Sections)
-    report_sections = structured_llm.invoke([SystemMessage(content=system_instructions_sections)]+[HumanMessage(content="Generate the sections of the report. Your response must include a 'sections' field containing a list of sections. Each section must have: name, description, plan, research, and content fields.")])
-
+    report_sections = planner_llm.invoke([HumanMessage(content=system_instructions_sections)]+[HumanMessage(content="Generate the sections of the report. Your response must include a 'sections' field containing a list of sections. Each section must have: name, description, plan, research, and content fields.")], config={"callbacks": [langfuse_handler]})
+    parsed = parse_llm_response(report_sections.content, Sections)
+    print(report_sections)
+    print(parsed)
     # Get sections
-    sections = report_sections.sections
+    sections = parsed.sections
 
     return {"sections": sections}
 
@@ -142,7 +149,7 @@ def generate_queries(state: SectionState, config: RunnableConfig):
     system_instructions = query_writer_instructions.format(section_topic=section.description, number_of_queries=number_of_queries)
 
     # Generate queries  
-    queries = structured_llm.invoke([SystemMessage(content=system_instructions)]+[HumanMessage(content="Generate search queries on the provided topic.")])
+    queries = structured_llm.invoke([SystemMessage(content=system_instructions)]+[HumanMessage(content="Generate search queries on the provided topic.")], config={"callbacks": [langfuse_handler]})
 
     return {"search_queries": queries.queries}
 
@@ -192,8 +199,9 @@ def write_section(state: SectionState, config: RunnableConfig) -> Command[Litera
     system_instructions = section_writer_instructions.format(section_title=section.name, section_topic=section.description, context=source_str, section_content=section.content)
 
     # Generate section  
-    section_content = writer_model.invoke([SystemMessage(content=system_instructions)]+[HumanMessage(content="Generate a report section based on the provided sources.")])
-    
+    section_content = writer_model.invoke([SystemMessage(content=system_instructions)]+[HumanMessage(content="Generate a report section based on the provided sources.")], config={"callbacks": [langfuse_handler]})
+    print(section_content)
+
     # Write content to the section object  
     section.content = section_content.content
 
@@ -202,7 +210,7 @@ def write_section(state: SectionState, config: RunnableConfig) -> Command[Litera
 
     # Feedback 
     structured_llm = writer_model.with_structured_output(Feedback)
-    feedback = structured_llm.invoke([SystemMessage(content=section_grader_instructions_formatted)]+[HumanMessage(content="Grade the report and consider follow-up questions for missing information:")])
+    feedback = structured_llm.invoke([SystemMessage(content=section_grader_instructions_formatted)]+[HumanMessage(content="Grade the report and consider follow-up questions for missing information:")], config={"callbacks": [langfuse_handler]})
 
     if feedback.grade == "pass" or state["search_iterations"] >= configurable.max_search_depth:
         # Publish the section to completed sections 
@@ -228,7 +236,7 @@ def write_final_sections(state: SectionState):
     system_instructions = final_section_writer_instructions.format(section_title=section.name, section_topic=section.description, context=completed_report_sections)
 
     # Generate section  
-    section_content = writer_model.invoke([SystemMessage(content=system_instructions)]+[HumanMessage(content="Generate a report section based on the provided sources.")])
+    section_content = writer_model.invoke([SystemMessage(content=system_instructions)]+[HumanMessage(content="Generate a report section based on the provided sources.")], config={"callbacks": [langfuse_handler]})
     
     # Write content to section 
     section.content = section_content.content
@@ -275,6 +283,7 @@ def compile_final_report(state: ReportState):
 
 # Report section sub-graph -- 
 
+
 # Add nodes 
 section_builder = StateGraph(SectionState, output=SectionOutputState)
 section_builder.add_node("generate_queries", generate_queries)
@@ -306,3 +315,4 @@ builder.add_edge("write_final_sections", "compile_final_report")
 builder.add_edge("compile_final_report", END)
 
 graph = builder.compile()
+

@@ -10,6 +10,15 @@ from langsmith import traceable
 tavily_client = TavilyClient()
 tavily_async_client = AsyncTavilyClient()
 
+
+from langfuse.callback import CallbackHandler
+langfuse_handler = CallbackHandler(
+    public_key="pk-lf-f3ee88dc-0d42-4ebf-a1fb-e050407b58af",
+    secret_key="sk-lf-8ec0a2ce-a3a9-4241-ac3f-fd14de92dc15",
+    host="http://localhost:3000"
+)
+
+
 def deduplicate_and_format_sources(search_response, max_tokens_per_source, include_raw_content=True):
     """
     Takes a list of search responses and formats them into a readable string.
@@ -215,3 +224,28 @@ def perplexity_search(search_queries):
         })
     
     return search_docs
+
+import json
+import re
+from typing import Type, TypeVar
+
+T = TypeVar("T")
+
+def parse_llm_response(response: str, schema: Type[T]) -> T:
+    """
+    Extracts JSON from an LLM string response and parses it into the desired schema.
+    
+    :param response: The raw string response from the LLM.
+    :param schema: A Pydantic model or dictionary schema to validate the output.
+    :return: The parsed and validated JSON object.
+    """
+    match = re.search(r'```json\s*(\{.*?\})\s*```', response, re.DOTALL)
+    if not match:
+        raise ValueError("No valid JSON found in LLM response.")
+    
+    json_str = match.group(1)
+    try:
+        parsed_json = json.loads(json_str)
+        return schema(**parsed_json) if isinstance(schema, type) else parsed_json
+    except json.JSONDecodeError as e:
+        raise ValueError("Failed to parse JSON from LLM response.") from e

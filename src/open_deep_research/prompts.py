@@ -11,29 +11,38 @@ report_planner_query_writer_instructions="""You are an expert technical writer, 
 
 <Task>
 Your goal is to generate {number_of_queries} search queries that will help gather comprehensive information for planning the report sections. 
-
+Ignore any report section that requires no web research.
 The queries should:
 
 1. Be related to the topic of the report
 2. Help satisfy the requirements specified in the report organization
 
 Make the queries specific enough to find high-quality, relevant sources while covering the breadth needed for the report structure.
+Return your answers in JSON using the schema below.
+class Queries(BaseModel):
+    queries: List[SearchQuery] = Field(
+        description="List of search queries.",
+    )
+class SearchQuery(BaseModel):
+    search_query: str = Field(None, description="Query for web search.")    
+
 </Task>"""
 
 # Prompt to generate the report plan
-report_planner_instructions="""I want a plan for a report. 
+report_planner_instructions="""
 
 <Task>
-Generate a list of sections for the report.
+You are given a report organization with sections denoted by numbers.
+Present each section in the following format:
 
-Each section should have the fields:
-
-- Name - Name for this section of the report.
+- Name - Name of the section. Use the section title as the name.
 - Description - Brief overview of the main topics covered in this section.
 - Research - Whether to perform web research for this section of the report.
+- Tools - Whether to perform local api call for this section of the report.
 - Content - The content of the section, which you will leave blank for now.
 
 For example, introduction and conclusion will not require research because they will distill information from other parts of the report.
+DO NOT add new sections. Only present existing sections.
 </Task>
 
 <Topic>
@@ -55,6 +64,29 @@ Here is context to use to plan the sections of the report:
 Here is feedback on the report structure from review (if any):
 {feedback}
 </Feedback>
+
+Return your answers in JSON using the schema below.
+class Section(BaseModel):
+    name: str = Field(
+        description="Name for this section of the report.",
+    )
+    description: str = Field(
+        description="Brief overview of the main topics and concepts to be covered in this section.",
+    )
+    research: bool = Field(
+        description="Whether to perform web research for this section of the report."
+    )
+    content: str = Field(
+        description="The content of the section."
+    )
+    tools: bool = Field(
+        description="Whether to use a tool for this section of the report."
+    )
+
+class Sections(BaseModel):
+    sections: List[Section] = Field(
+        description="Sections of the report.",
+    )
 """
 
 # Query writer instructions

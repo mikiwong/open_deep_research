@@ -10,7 +10,7 @@ async def run_graph():
             "planner_provider": "openai",
             "max_search_depth": 1,
             "planner_model": "o1-mini",
-            "writer_model": "gpt-3.5-turbo"
+            "writer_model": "o1-mini"
         }
     }
 

@@ -14,7 +14,10 @@ class Section(BaseModel):
     )
     content: str = Field(
         description="The content of the section."
-    )   
+    )
+    tools: bool = Field(
+        description="Whether to use a tool for this section of the report."
+    )
 
 class Sections(BaseModel):
     sections: List[Section] = Field(

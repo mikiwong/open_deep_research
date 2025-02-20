@@ -7,10 +7,10 @@ from langchain_core.runnables import RunnableConfig
 from typing_extensions import Annotated
 from dataclasses import dataclass
 
-DEFAULT_REPORT_STRUCTURE = """The report structure should focus on breaking-down the user-provided topic:
+DEFAULT_REPORT_STRUCTURE = """The report structure should focus on breaking-down the user-provided ticker:
 
 1. Introduction (no research needed)
-   - Brief overview of the topic area
+   - Brief overview of the ticker
 
 2. Main Body Sections:
    - Each section should focus on a sub-topic of the user-provided topic
@@ -36,8 +36,8 @@ class Configuration:
     number_of_queries: int = 2 # Number of search queries to generate per iteration
     max_search_depth: int = 2 # Maximum number of reflection + search iterations
     planner_provider: PlannerProvider = PlannerProvider.OPENAI # Defaults to OpenAI as provider
-    planner_model: str = "o3-mini" # Defaults to OpenAI o3-mini as planner model
-    writer_model: str = "claude-3-5-sonnet-latest" # Defaults to Anthropic as provider
+    planner_model: str = "o1-mini" # Defaults to OpenAI o3-mini as planner model
+    writer_model: str = "gpt-4o" # Defaults to Anthropic as provider, claude-3-5-sonnet-latest
     search_api: SearchAPI = SearchAPI.TAVILY # Default to TAVILY
 
     @classmethod

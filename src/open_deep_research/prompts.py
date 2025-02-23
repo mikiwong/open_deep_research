@@ -1,5 +1,5 @@
 # Prompt to generate search queries to help with planning the report
-report_planner_query_writer_instructions="""You are an expert technical writer, helping to plan a report. 
+report_planner_query_writer_instructions = """You are an expert technical writer, helping to plan a report. 
 
 <Report topic>
 {topic}
@@ -29,14 +29,14 @@ class SearchQuery(BaseModel):
 </Task>"""
 
 # Prompt to generate the report plan
-report_planner_instructions="""
+report_planner_instructions = """
 
 <Task>
 You are given a report organization with sections denoted by numbers.
 Present each section in the following format:
 
-- Name - Name of the section. Use the section title as the name.
-- Description - Brief overview of the main topics covered in this section.
+- Name - Name of the section. Rephrase the section title with the ticker as the name.
+- Description - Brief overview of the topics covered in this section for the ticker.
 - Research - Whether to perform web research for this section of the report.
 - Tools - Whether to perform local api call for this section of the report.
 - Content - The content of the section, which you will leave blank for now.
@@ -45,10 +45,10 @@ For example, introduction and conclusion will not require research because they 
 DO NOT add new sections. Only present existing sections.
 </Task>
 
-<Topic>
-The topic of the report is:
+<Ticker>
+The ticker of the report is:
 {topic}
-</Topic>
+</Ticker>
 
 <Report organization>
 The report should follow this organization: 
@@ -90,7 +90,7 @@ class Sections(BaseModel):
 """
 
 # Query writer instructions
-query_writer_instructions="""You are an expert technical writer crafting targeted web search queries that will gather comprehensive information for writing a technical report section.
+query_writer_instructions = """You are an expert technical writer crafting targeted web search queries that will gather comprehensive information for writing a technical report section.
 
 <Section topic>
 {section_topic}
@@ -105,6 +105,7 @@ When generating {number_of_queries} search queries, ensure they:
 5. Search for both official documentation and practical implementation examples
 
 Your queries should be:
+- Include the ticker in question
 - Specific enough to avoid generic results
 - Technical enough to capture detailed implementation information
 - Diverse enough to cover all aspects of the section plan
@@ -187,7 +188,7 @@ If the section fails any criteria, generate specific follow-up search queries to
 </format>
 """
 
-final_section_writer_instructions="""You are an expert technical writer crafting a section that synthesizes information from the rest of the report.
+final_section_writer_instructions = """You are an expert technical writer crafting a section that synthesizes information from the rest of the report.
 
 <Section topic> 
 {section_topic}

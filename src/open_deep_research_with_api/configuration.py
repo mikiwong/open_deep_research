@@ -35,8 +35,35 @@ DEFAULT_REPORT_STRUCTURE = """The report structure should focus on breaking-down
    - Provide a concise summary of the report
    - Provide a table providing the scores and rankings
 
-   """
+"""
+C3_WAR_PROMPT = """ 
+The report structure should focus on breaking-down the user-provided country: 
 
+1. Executive Summary
+   - Brief overview of the topic, key events and current status
+   - High-level assessment of strategic and operational implications
+
+2. Background and context
+    - Origins of any conflict and key historical events.
+    - Overview of parties involved, its military capabilities, and objectives.
+    - Political and regional dynamics influencing the war.
+
+3. Current Operational Situation
+    - Overview of ongoing military operations.
+    - Summary of major battles, airstrikes, and troop movements.
+
+4. Timeline 
+    - A timeline of key events
+
+5. Future Scenarios and Recommendations
+    - Short-term and long-term outcomes.
+    - Military, political, and intelligence recommendations.
+    - Implications for regional and global security.
+
+6.  Our current stand on the country
+    - Use the tool get_sentiment to get current stand on the country
+
+"""
 
 class SearchAPI(Enum):
     PERPLEXITY = "perplexity"
@@ -53,7 +80,7 @@ class Configuration:
     """The configurable fields for the chatbot."""
 
     report_structure: str = (
-        DEFAULT_REPORT_STRUCTURE  # Defaults to the default report structure
+        C3_WAR_PROMPT  # Defaults to the default report structure
     )
     number_of_queries: int = 2  # Number of search queries to generate per iteration
     max_search_depth: int = 2  # Maximum number of reflection + search iterations
